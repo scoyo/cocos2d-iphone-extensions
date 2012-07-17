@@ -759,31 +759,26 @@ typedef enum
     // do not ease out further than quarter the rubberEffectRatio (which is tested and looks good for a 0.5f ratio)
     const CGFloat MaximalOverTheEdgeScrollingWidth = [UIScreen mainScreen].bounds.size.width * self.rubberEffectRatio / 4;
     const CGFloat MaximalOverTheEdgeScrollingHeight = [UIScreen mainScreen].bounds.size.height * self.rubberEffectRatio / 4;
-    bool isEdgeVisible = NO;
 
     if (rightEdgeFinalPosition > 0)
     {
         CGFloat correctTranslationBy = MAX(rightEdgeFinalPosition - MaximalOverTheEdgeScrollingWidth, 0);
         normalizedVector.x += correctTranslationBy;
-        isEdgeVisible = YES;
     }
     else if (leftEdgeFinalPosition > 0)
     {
         CGFloat correctTranslationBy = MAX(leftEdgeFinalPosition - MaximalOverTheEdgeScrollingWidth, 0);
         normalizedVector.x -= correctTranslationBy;
-        isEdgeVisible = YES;
     }
     if (topEdgeFinalPosition > 0)
     {
         CGFloat correctTranslationBy = MAX(topEdgeFinalPosition - MaximalOverTheEdgeScrollingHeight, 0);
         normalizedVector.y += correctTranslationBy;
-        isEdgeVisible = YES;
     }
     else if (bottomEdgeFinalPosition > 0)
     {
         CGFloat correctTranslationBy = MAX(bottomEdgeFinalPosition - MaximalOverTheEdgeScrollingHeight, 0);
         normalizedVector.y -= correctTranslationBy;
-        isEdgeVisible = YES;
     }
     CCLOG(@"after correction: will move by (xy): %f %f", normalizedVector.x, normalizedVector.y);
 

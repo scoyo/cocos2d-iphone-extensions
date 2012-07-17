@@ -269,7 +269,7 @@ typedef enum
 
 	for (UITouch *touch in [touches allObjects]) 
 	{
-		// Add new touche to the array with current touches
+		// Add new touch to the array with current touches
 		[self.touches addObject: touch];
 	}
     

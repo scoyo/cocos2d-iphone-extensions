@@ -733,11 +733,8 @@ typedef enum
 
 - (void) runEaseOutEffect
 {
-    // avoid ease out effect after minimal movement--doesn't look nice
-    const CGFloat MinimalMovementThreshold = 10.0f;
-
     // No ease out effect if not configured, while rubber effect is running (any edge was visible on screen while releasing finger), or finger wasn't moved further than the given threshold.
-    if (!self.easeOutEffectIntensity || _rubberEffectRecovering || (abs(self.currentDistance.x) < MinimalMovementThreshold && abs(self.currentDistance.y) < MinimalMovementThreshold))
+    if (!self.easeOutEffectIntensity || _rubberEffectRecovering || (abs(self.currentDistance.x) < maxTouchDistanceToClick && abs(self.currentDistance.y) < maxTouchDistanceToClick))
     {
         return;
     }

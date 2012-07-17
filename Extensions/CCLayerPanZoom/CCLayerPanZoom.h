@@ -131,6 +131,7 @@ typedef enum
 
 /** The max distance in points that touch can be dragged before click.
  * If traveled distance is greater then click message will not be sent to the delegate. 
+ * This is also the threshold for the ease out effect.
  * Default is 15.0f */
 @property (readwrite, assign) CGFloat maxTouchDistanceToClick;   
 

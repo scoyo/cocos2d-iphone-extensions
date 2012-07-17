@@ -56,7 +56,8 @@ typedef enum
 
 /** Sent to delegate each time, when touch event was ended by releasing finger from screen.
  * Only sent for single touch and if finger was dragged on the screen before. */
-- (void) layerPanZoom: (CCLayerPanZoom *) sender releasedAtPoint: (CGPoint) aPoint;
+- (void) layerPanZoom: (CCLayerPanZoom *) sender
+      releasedAtPoint: (CGPoint) aPoint;
 
 /** Sent to delegate each time, when touch position was updated. */
 - (void) layerPanZoom: (CCLayerPanZoom *) sender 

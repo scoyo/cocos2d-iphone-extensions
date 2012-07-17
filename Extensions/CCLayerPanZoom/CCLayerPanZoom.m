@@ -366,8 +366,11 @@ typedef enum
         {
             if (self.touchDistance > self.maxTouchDistanceToClick && !_touchMoveBegan)
             {
-                [self.delegate layerPanZoom: self 
-                   touchMoveBeganAtPosition: [self convertToNodeSpace: prevTouchPosition]];
+                if ([self.delegate respondsToSelector:@selector(layerPanZoom:touchMoveBeganAtPosition:)])
+                {
+                    [self.delegate layerPanZoom: self 
+                       touchMoveBeganAtPosition: [self convertToNodeSpace: prevTouchPosition]];
+                }
                 _touchMoveBegan = YES;
             }
         }
@@ -384,13 +387,13 @@ typedef enum
     {
         UITouch *touch = [self.touches objectAtIndex: 0];
         CGPoint curPos = [[CCDirector sharedDirector] convertToGL: [touch locationInView: [touch view]]];
-        if (self.touchDistance < self.maxTouchDistanceToClick)
+        if (self.touchDistance < self.maxTouchDistanceToClick && [self.delegate respondsToSelector:@selector(layerPanZoom:clickedAtPoint:tapCount:)])
         {
             [self.delegate layerPanZoom: self
                          clickedAtPoint: [self convertToNodeSpace: curPos]
                                tapCount: [touch tapCount]];
         }
-        else
+        else if ([self.delegate respondsToSelector:@selector(layerPanZoom:releasedAtPoint:)])
         {
             [self.delegate layerPanZoom: self
                         releasedAtPoint: [self convertToNodeSpace: curPos]];
@@ -464,8 +467,11 @@ typedef enum
         if (!CGPointEqualToPoint(_prevSingleTouchPositionInLayer, touchPositionInLayer))
         {
             _prevSingleTouchPositionInLayer = touchPositionInLayer;
-            [self.delegate layerPanZoom: self 
-                   touchPositionUpdated: touchPositionInLayer];
+            if ([self.delegate respondsToSelector:@selector(layerPanZoom:touchPositionUpdated:)])
+            {
+                [self.delegate layerPanZoom: self 
+                       touchPositionUpdated: touchPositionInLayer];
+            }
         }
 
     }

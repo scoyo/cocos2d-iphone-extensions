@@ -286,12 +286,12 @@ typedef enum
 			  withEvent: (UIEvent *) event
 {
 
-  // Fixes issue #108:
-  // ccTouchesMoved should never be called if ccTouchesBegan is not called first.
-  // However, when the scene is transitioning in, ccTouchesBegan is not called,
-  // causing self.touches to be empty, thus crashing the app due to an attempt
-  // to access an empty array.
-  if ([self.touches count] == 0) return;
+    // Fixes issue #108:
+    // ccTouchesMoved should never be called if ccTouchesBegan is not called first.
+    // However, when the scene is transitioning in, ccTouchesBegan is not called,
+    // causing self.touches to be empty, thus crashing the app due to an attempt
+    // to access an empty array.
+    if ([self.touches count] == 0) return;
 
 	BOOL multitouch = [self.touches count] > 1;
 	if (multitouch)

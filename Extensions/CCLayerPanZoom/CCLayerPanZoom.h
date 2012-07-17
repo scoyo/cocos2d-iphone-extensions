@@ -48,10 +48,15 @@ typedef enum
 @optional
 
 /** Sent to delegate each time, when click event was obtained. 
- * Only for mode = kCCLayerPanZoomModeSheet. */
+ * Only for mode = kCCLayerPanZoomModeSheet.
+ * Only sent for single touch and if finger was not dragged on the screen before. */
 - (void) layerPanZoom: (CCLayerPanZoom *) sender 
        clickedAtPoint: (CGPoint) aPoint
              tapCount: (NSUInteger) tapCount;
+
+/** Sent to delegate each time, when touch event was ended by releasing finger from screen.
+ * Only sent for single touch and if finger was dragged on the screen before. */
+- (void) layerPanZoom: (CCLayerPanZoom *) sender releasedAtPoint: (CGPoint) aPoint;
 
 /** Sent to delegate each time, when touch position was updated. */
 - (void) layerPanZoom: (CCLayerPanZoom *) sender 

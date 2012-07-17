@@ -380,14 +380,21 @@ typedef enum
     _singleTouchTimestamp = INFINITY;
     
     // Process click event in single touch.
-    if (  (self.touchDistance < self.maxTouchDistanceToClick) && (self.delegate) 
-        && ([self.touches count] == 1))
+    if ( (self.delegate) && ([self.touches count] == 1) )
     {
-        UITouch *touch = [self.touches objectAtIndex: 0];        
+        UITouch *touch = [self.touches objectAtIndex: 0];
         CGPoint curPos = [[CCDirector sharedDirector] convertToGL: [touch locationInView: [touch view]]];
-        [self.delegate layerPanZoom: self
-                     clickedAtPoint: [self convertToNodeSpace: curPos]
-                           tapCount: [touch tapCount]];
+        if (self.touchDistance < self.maxTouchDistanceToClick)
+        {
+            [self.delegate layerPanZoom: self
+                         clickedAtPoint: [self convertToNodeSpace: curPos]
+                               tapCount: [touch tapCount]];
+        }
+        else
+        {
+            [self.delegate layerPanZoom: self
+                        releasedAtPoint: [self convertToNodeSpace: curPos]];
+        }
     }
     
 	for (UITouch *touch in [touches allObjects]) 

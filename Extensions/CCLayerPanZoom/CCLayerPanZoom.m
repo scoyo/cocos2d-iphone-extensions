@@ -62,7 +62,7 @@ enum nodeTags
 @implementation CCLayerPanZoomDebugLines
 
 @synthesize topFrameMargin = _topFrameMargin, bottomFrameMargin = _bottomFrameMargin,
-            leftFrameMargin = _leftFrameMargin, rightFrameMargin = _rightFrameMargin;
+leftFrameMargin = _leftFrameMargin, rightFrameMargin = _rightFrameMargin;
 
 - (void) draw
 {
@@ -410,14 +410,14 @@ typedef enum
 		self.touchDistance = 0.0f;
 	}
 
-    if (![self.touches count] && !_rubberEffectRecovering)
-    {
-        [self recoverPositionAndScale];
-    }
-
     if (![self.touches count] && self.easeOutEffectIntensity && !_easeOutEffectRunning)
     {
         [self runEaseOutEffect];
+    }
+
+    if (![self.touches count] && !_rubberEffectRecovering)
+    {
+        [self recoverPositionAndScale];
     }
 }
 
@@ -633,106 +633,113 @@ typedef enum
         CGFloat bottomEdgeDistance = [self bottomEdgeDistance];
         CGFloat scale = [self minPossibleScale];
 
-        if ((!rightEdgeDistance && !leftEdgeDistance && !topEdgeDistance && !bottomEdgeDistance) || _easeOutEffectRunning)
+        if ((rightEdgeDistance || leftEdgeDistance || topEdgeDistance || bottomEdgeDistance) && !_easeOutEffectRunning)
         {
-            return;
-        }
 
-        if (self.scale < scale)
-        {
-            _rubberEffectRecovering = YES;
-            CGPoint newPosition = CGPointZero;
-            if (rightEdgeDistance && leftEdgeDistance && topEdgeDistance && bottomEdgeDistance)
+            if (self.scale < scale)
             {
-                CGFloat dx = scale * self.contentSize.width * (self.anchorPoint.x - 0.5f);
-                CGFloat dy = scale * self.contentSize.height * (self.anchorPoint.y - 0.5f);
-                newPosition = ccp(winSize.width * 0.5f + dx, winSize.height * 0.5f + dy);
-            }
-            else if (rightEdgeDistance && leftEdgeDistance && topEdgeDistance)
-            {
-                CGFloat dx = scale * self.contentSize.width * (self.anchorPoint.x - 0.5f);
-                CGFloat dy = scale * self.contentSize.height * (1.0f - self.anchorPoint.y);
-                newPosition = ccp(winSize.width * 0.5f + dx, winSize.height - dy);
-            }
-            else if (rightEdgeDistance && leftEdgeDistance && bottomEdgeDistance)
-            {
-                CGFloat dx = scale * self.contentSize.width * (self.anchorPoint.x - 0.5f);
-                CGFloat dy = scale * self.contentSize.height * self.anchorPoint.y;
-                newPosition = ccp(winSize.width * 0.5f + dx, dy);
-            }
-            else if (rightEdgeDistance && topEdgeDistance && bottomEdgeDistance)
-            {
-                CGFloat dx = scale * self.contentSize.width * (1.0f - self.anchorPoint.x);
-                CGFloat dy = scale * self.contentSize.height * (self.anchorPoint.y - 0.5f);
-                newPosition = ccp(winSize.width  - dx, winSize.height  * 0.5f + dy);
-            }
-            else if (leftEdgeDistance && topEdgeDistance && bottomEdgeDistance)
-            {
-                CGFloat dx = scale * self.contentSize.width * self.anchorPoint.x;
-                CGFloat dy = scale * self.contentSize.height * (self.anchorPoint.y - 0.5f);
-                newPosition = ccp(dx, winSize.height * 0.5f + dy);
-            }
-            else if (leftEdgeDistance && topEdgeDistance)
-            {
-                CGFloat dx = scale * self.contentSize.width * self.anchorPoint.x;
-                CGFloat dy = scale * self.contentSize.height * (1.0f - self.anchorPoint.y);
-                newPosition = ccp(dx, winSize.height - dy);
-            }
-            else if (leftEdgeDistance && bottomEdgeDistance)
-            {
-                CGFloat dx = scale * self.contentSize.width * self.anchorPoint.x;
-                CGFloat dy = scale * self.contentSize.height * self.anchorPoint.y;
-                newPosition = ccp(dx, dy);
-            }
-            else if (rightEdgeDistance && topEdgeDistance)
-            {
-                CGFloat dx = scale * self.contentSize.width * (1.0f - self.anchorPoint.x);
-                CGFloat dy = scale * self.contentSize.height * (1.0f - self.anchorPoint.y);
-                newPosition = ccp(winSize.width - dx, winSize.height - dy);
-            }
-            else if (rightEdgeDistance && bottomEdgeDistance)
-            {
-                CGFloat dx = scale * self.contentSize.width * (1.0f - self.anchorPoint.x);
-                CGFloat dy = scale * self.contentSize.height * self.anchorPoint.y;
-                newPosition = ccp(winSize.width - dx, dy);
-            }
-            else if (topEdgeDistance || bottomEdgeDistance)
-            {
-                CGFloat dy = scale * self.contentSize.height * (self.anchorPoint.y - 0.5f);
-                newPosition = ccp(self.position.x, winSize.height * 0.5f + dy);
-            }
-            else if (leftEdgeDistance || rightEdgeDistance)
-            {
-                CGFloat dx = scale * self.contentSize.width * (self.anchorPoint.x - 0.5f);
-                newPosition = ccp(winSize.width * 0.5f + dx, self.position.y);
-            }
+                _rubberEffectRecovering = YES;
+                CGPoint newPosition = CGPointZero;
+                if (rightEdgeDistance && leftEdgeDistance && topEdgeDistance && bottomEdgeDistance)
+                {
+                    CGFloat dx = scale * self.contentSize.width * (self.anchorPoint.x - 0.5f);
+                    CGFloat dy = scale * self.contentSize.height * (self.anchorPoint.y - 0.5f);
+                    newPosition = ccp(winSize.width * 0.5f + dx, winSize.height * 0.5f + dy);
+                }
+                else if (rightEdgeDistance && leftEdgeDistance && topEdgeDistance)
+                {
+                    CGFloat dx = scale * self.contentSize.width * (self.anchorPoint.x - 0.5f);
+                    CGFloat dy = scale * self.contentSize.height * (1.0f - self.anchorPoint.y);
+                    newPosition = ccp(winSize.width * 0.5f + dx, winSize.height - dy);
+                }
+                else if (rightEdgeDistance && leftEdgeDistance && bottomEdgeDistance)
+                {
+                    CGFloat dx = scale * self.contentSize.width * (self.anchorPoint.x - 0.5f);
+                    CGFloat dy = scale * self.contentSize.height * self.anchorPoint.y;
+                    newPosition = ccp(winSize.width * 0.5f + dx, dy);
+                }
+                else if (rightEdgeDistance && topEdgeDistance && bottomEdgeDistance)
+                {
+                    CGFloat dx = scale * self.contentSize.width * (1.0f - self.anchorPoint.x);
+                    CGFloat dy = scale * self.contentSize.height * (self.anchorPoint.y - 0.5f);
+                    newPosition = ccp(winSize.width  - dx, winSize.height  * 0.5f + dy);
+                }
+                else if (leftEdgeDistance && topEdgeDistance && bottomEdgeDistance)
+                {
+                    CGFloat dx = scale * self.contentSize.width * self.anchorPoint.x;
+                    CGFloat dy = scale * self.contentSize.height * (self.anchorPoint.y - 0.5f);
+                    newPosition = ccp(dx, winSize.height * 0.5f + dy);
+                }
+                else if (leftEdgeDistance && topEdgeDistance)
+                {
+                    CGFloat dx = scale * self.contentSize.width * self.anchorPoint.x;
+                    CGFloat dy = scale * self.contentSize.height * (1.0f - self.anchorPoint.y);
+                    newPosition = ccp(dx, winSize.height - dy);
+                }
+                else if (leftEdgeDistance && bottomEdgeDistance)
+                {
+                    CGFloat dx = scale * self.contentSize.width * self.anchorPoint.x;
+                    CGFloat dy = scale * self.contentSize.height * self.anchorPoint.y;
+                    newPosition = ccp(dx, dy);
+                }
+                else if (rightEdgeDistance && topEdgeDistance)
+                {
+                    CGFloat dx = scale * self.contentSize.width * (1.0f - self.anchorPoint.x);
+                    CGFloat dy = scale * self.contentSize.height * (1.0f - self.anchorPoint.y);
+                    newPosition = ccp(winSize.width - dx, winSize.height - dy);
+                }
+                else if (rightEdgeDistance && bottomEdgeDistance)
+                {
+                    CGFloat dx = scale * self.contentSize.width * (1.0f - self.anchorPoint.x);
+                    CGFloat dy = scale * self.contentSize.height * self.anchorPoint.y;
+                    newPosition = ccp(winSize.width - dx, dy);
+                }
+                else if (topEdgeDistance || bottomEdgeDistance)
+                {
+                    CGFloat dy = scale * self.contentSize.height * (self.anchorPoint.y - 0.5f);
+                    newPosition = ccp(self.position.x, winSize.height * 0.5f + dy);
+                }
+                else if (leftEdgeDistance || rightEdgeDistance)
+                {
+                    CGFloat dx = scale * self.contentSize.width * (self.anchorPoint.x - 0.5f);
+                    newPosition = ccp(winSize.width * 0.5f + dx, self.position.y);
+                }
 
-            id moveToPosition = [CCMoveTo actionWithDuration: self.rubberEffectRecoveryTime
-                                                    position: newPosition];
-            id scaleToPosition = [CCScaleTo actionWithDuration: self.rubberEffectRecoveryTime
-                                                         scale: scale];
-            CCSpawn *sequence = [CCSpawn actions: scaleToPosition, moveToPosition, [CCCallFunc actionWithTarget: self selector: @selector(recoverEnded)], nil];
-            sequence.tag = CCLAYERPANZOOM_ACTION_TAG;
-            [self runAction: sequence];
+                id moveToPosition = [CCMoveTo actionWithDuration: self.rubberEffectRecoveryTime
+                                                        position: newPosition];
+                id scaleToPosition = [CCScaleTo actionWithDuration: self.rubberEffectRecoveryTime
+                                                             scale: scale];
+                CCSpawn *sequence = [CCSpawn actions: scaleToPosition, moveToPosition, [CCCallFunc actionWithTarget: self selector: @selector(recoverEnded)], nil];
+                sequence.tag = CCLAYERPANZOOM_ACTION_TAG;
+                [self runAction: sequence];
 
-        }
-        else
-        {
-            _rubberEffectRecovering = YES;
-            id moveToPosition = [CCMoveTo actionWithDuration: self.rubberEffectRecoveryTime
-                                                    position: ccp(self.position.x + rightEdgeDistance - leftEdgeDistance,
-                                                                  self.position.y + topEdgeDistance - bottomEdgeDistance)];
-            CCSpawn *sequence = [CCSpawn actions: moveToPosition, [CCCallFunc actionWithTarget: self selector: @selector(recoverEnded)], nil];
-            sequence.tag = CCLAYERPANZOOM_ACTION_TAG;
-            [self runAction: sequence];
+            }
+            else
+            {
+                _rubberEffectRecovering = YES;
+                id moveToPosition = [CCMoveTo actionWithDuration: self.rubberEffectRecoveryTime
+                                                        position: ccp(self.position.x + rightEdgeDistance - leftEdgeDistance,
+                                                                      self.position.y + topEdgeDistance - bottomEdgeDistance)];
+                CCSpawn *sequence = [CCSpawn actions: moveToPosition, [CCCallFunc actionWithTarget: self selector: @selector(recoverEnded)], nil];
+                sequence.tag = CCLAYERPANZOOM_ACTION_TAG;
+                [self runAction: sequence];
 
+            }
         }
 	}
+    if (!_rubberEffectRecovering && !_easeOutEffectRunning)
+    {
+        [self recoverEnded];
+    }
 }
 
 - (void) recoverEnded
 {
     _rubberEffectRecovering = NO;
+    if ([self.delegate respondsToSelector:@selector(layerPanZoomRecoveringsFinished:)])
+    {
+        [self.delegate layerPanZoomRecoveringsFinished:self];
+    }
 }
 
 #pragma mark Ease Out Effect related
@@ -926,24 +933,24 @@ typedef enum
     if (edge == kCCLayerPanZoomFrameEdgeLeft)
     {
         speed = self.minSpeed + (self.maxSpeed - self.minSpeed) *
-        (self.panBoundsRect.origin.x + self.leftFrameMargin - pos.x) / self.leftFrameMargin;
+            (self.panBoundsRect.origin.x + self.leftFrameMargin - pos.x) / self.leftFrameMargin;
     }
     if (edge == kCCLayerPanZoomFrameEdgeBottomLeft || edge == kCCLayerPanZoomFrameEdgeTopLeft)
     {
         speed = self.minSpeed + (self.maxSpeed - self.minSpeed) *
-        (self.panBoundsRect.origin.x + self.leftFrameMargin - pos.x) / (self.leftFrameMargin * sqrt(2.0f));
+            (self.panBoundsRect.origin.x + self.leftFrameMargin - pos.x) / (self.leftFrameMargin * sqrt(2.0f));
     }
     if (edge == kCCLayerPanZoomFrameEdgeRight)
     {
         speed = - (self.minSpeed + (self.maxSpeed - self.minSpeed) *
-            (pos.x - self.panBoundsRect.origin.x - self.panBoundsRect.size.width +
-             self.rightFrameMargin) / self.rightFrameMargin);
+                   (pos.x - self.panBoundsRect.origin.x - self.panBoundsRect.size.width +
+                    self.rightFrameMargin) / self.rightFrameMargin);
     }
     if (edge == kCCLayerPanZoomFrameEdgeBottomRight || edge == kCCLayerPanZoomFrameEdgeTopRight)
     {
         speed = - (self.minSpeed + (self.maxSpeed - self.minSpeed) *
-            (pos.x - self.panBoundsRect.origin.x - self.panBoundsRect.size.width +
-             self.rightFrameMargin) / (self.rightFrameMargin * sqrt(2.0f)));
+                   (pos.x - self.panBoundsRect.origin.x - self.panBoundsRect.size.width +
+                    self.rightFrameMargin) / (self.rightFrameMargin * sqrt(2.0f)));
     }
     return speed;
 }
@@ -955,24 +962,24 @@ typedef enum
     if (edge == kCCLayerPanZoomFrameEdgeBottom)
     {
         speed = self.minSpeed + (self.maxSpeed - self.minSpeed) *
-            (self.panBoundsRect.origin.y + self.bottomFrameMargin - pos.y) / self.bottomFrameMargin;
+        (self.panBoundsRect.origin.y + self.bottomFrameMargin - pos.y) / self.bottomFrameMargin;
     }
     if (edge == kCCLayerPanZoomFrameEdgeBottomLeft || edge == kCCLayerPanZoomFrameEdgeBottomRight)
     {
         speed = self.minSpeed + (self.maxSpeed - self.minSpeed) *
-            (self.panBoundsRect.origin.y + self.bottomFrameMargin - pos.y) / (self.bottomFrameMargin * sqrt(2.0f));
+        (self.panBoundsRect.origin.y + self.bottomFrameMargin - pos.y) / (self.bottomFrameMargin * sqrt(2.0f));
     }
     if (edge == kCCLayerPanZoomFrameEdgeTop)
     {
         speed = - (self.minSpeed + (self.maxSpeed - self.minSpeed) *
-            (pos.y - self.panBoundsRect.origin.y - self.panBoundsRect.size.height +
-             self.topFrameMargin) / self.topFrameMargin);
+                   (pos.y - self.panBoundsRect.origin.y - self.panBoundsRect.size.height +
+                    self.topFrameMargin) / self.topFrameMargin);
     }
     if (edge == kCCLayerPanZoomFrameEdgeTopLeft || edge == kCCLayerPanZoomFrameEdgeTopRight)
     {
         speed = - (self.minSpeed + (self.maxSpeed - self.minSpeed) *
-            (pos.y - self.panBoundsRect.origin.y - self.panBoundsRect.size.height +
-             self.topFrameMargin) / (self.topFrameMargin * sqrt(2.0f)));
+                   (pos.y - self.panBoundsRect.origin.y - self.panBoundsRect.size.height +
+                    self.topFrameMargin) / (self.topFrameMargin * sqrt(2.0f)));
     }
     return speed;
 }

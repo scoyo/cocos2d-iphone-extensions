@@ -67,6 +67,9 @@ typedef enum
  * This means that click event is not possible with that touch from now. */
 - (void) layerPanZoom: (CCLayerPanZoom *) sender touchMoveBeganAtPosition: (CGPoint) aPoint;
 
+/** Sent to delegate each time, when recoverings of position and scale finished. Also sent if no recoverings were necessary. */
+- (void) layerPanZoomRecoveringsFinished: (CCLayerPanZoom *) sender;
+
 @end
 
 

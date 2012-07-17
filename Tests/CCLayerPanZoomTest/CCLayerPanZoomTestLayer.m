@@ -48,6 +48,8 @@ static int testId = 0;
 static NSString *tests[] = {
     @"CCLayerPanZoomSimpleSheetTestLayer",
     @"CCLayerPanZoomAdvancedSheetTestLayer",
+    @"CCLayerPanZoomEaseOutTestLayer",
+    @"CCLayerPanZoomRubberEaseOutTestLayer",
     @"CCLayerPanZoomFrameTestLayer",
 };
 
@@ -94,14 +96,14 @@ Class backTest()
         CCMenuItemLabel *itemLeft = [CCMenuItemLabel itemWithLabel: labelLeft 
                                                             target: self 
                                                           selector: @selector(backCallback:)];
-        itemLeft.position = ccp(s.width / 2 - 200.0f, s.height - 50.0f);
+        itemLeft.position = ccp(s.width / 2 - 400.0f, s.height - 50.0f);
         CCLabelTTF *labelRight = [CCLabelTTF labelWithString: @">>" 
                                                     fontName: @"Arial" 
                                                     fontSize: 32];
         CCMenuItemLabel *itemRight = [CCMenuItemLabel itemWithLabel: labelRight 
                                                              target: self 
                                                            selector: @selector(nextCallback:)];
-        itemRight.position = ccp(s.width / 2 + 200.0f, s.height - 50.0f);		
+        itemRight.position = ccp(s.width / 2 + 400.0f, s.height - 50.0f);		
 		CCMenu *menu = [CCMenu menuWithItems: itemLeft, itemRight, nil];
 		menu.position = CGPointZero;
 		[self addChild: menu 
@@ -162,7 +164,7 @@ Class backTest()
 @end
 
 #pragma mark -
-#pragma mark SimpleSheetTest
+#pragma mark SimpleSheetTest 1
 
 @implementation CCLayerPanZoomSimpleSheetTestLayer
 
@@ -203,7 +205,7 @@ Class backTest()
 
 - (NSString *) title
 {
-	return @"Test 1. Sheet (Rubber Effect OFF).";
+	return @"Test 1. Sheet (Rubber Effect OFF, Ease Out Effect OFF).";
 }
 
 - (void) updateForScreenReshape
@@ -228,7 +230,7 @@ Class backTest()
 @end
 
 #pragma mark -
-#pragma mark SimpleSheetTest
+#pragma mark AdvancedSheetTest 2
 
 @implementation CCLayerPanZoomAdvancedSheetTestLayer
 
@@ -267,7 +269,7 @@ Class backTest()
 
 - (NSString *) title
 {
-	return @"Test 2. Sheet (Rubber Effect ON).";
+	return @"Test 2. Sheet (Rubber Effect ON, Ease Out Effect OFF).";
 }
 
 - (void) updateForScreenReshape
@@ -290,6 +292,142 @@ Class backTest()
     
     // Allow panZoomLayer's contents occupy half of the screen.
     _panZoomLayer.minScale = 0.5f * _panZoomLayer.panBoundsRect.size.width  / boundingRect.size.width;
+}
+
+@end
+
+#pragma mark -
+#pragma mark EaseOutTest 3
+
+@implementation CCLayerPanZoomEaseOutTestLayer
+
+- (id) init
+{
+	if ((self = [super init])) 
+    {
+        _panZoomLayer = [[CCLayerPanZoom node] retain];
+        [self addChild: _panZoomLayer];
+		_panZoomLayer.delegate = self; 
+        
+        // background
+        CCSprite *background = [CCSprite spriteWithFile: @"background.png"];
+        background.anchorPoint = ccp(0,0);
+		background.scale = CC_CONTENT_SCALE_FACTOR() * 2; // pre-zoom background for better ease out effect
+        [_panZoomLayer addChild: background 
+                             z :0 
+                            tag: kBackgroundTag];
+		// create and initialize a Label
+		CCLabelTTF *label = [CCLabelTTF labelWithString: @"Try ease out effect by flicking finger." 
+                                               fontName: @"Marker Felt" 
+                                               fontSize: 24];
+		label.scale = 0.7f; //< to be visible on iPod Touch screen.
+		label.color = ccWHITE;
+		// add the label as a child to this Layer
+		[_panZoomLayer addChild: label 
+                              z: 1 
+                            tag: kLabelTag];
+        _panZoomLayer.mode = kCCLayerPanZoomModeSheet;
+        _panZoomLayer.minScale = 1.0f;
+        _panZoomLayer.rubberEffectRatio = 0.0f;
+		[self updateForScreenReshape];
+	}
+	
+	return self;
+	
+}
+
+- (NSString *) title
+{
+	return @"Test 3. Sheet (Rubber Effect OFF, Ease Out Effect ON).";
+}
+
+- (void) updateForScreenReshape
+{
+	CGSize winSize = [[CCDirector sharedDirector] winSize];
+	CCNode *background = [_panZoomLayer getChildByTag: kBackgroundTag];
+	// our bounding rect
+	CGRect boundingRect = CGRectMake(0, 0, 0, 0);
+	boundingRect.size = [background boundingBox].size;
+	[_panZoomLayer setContentSize: boundingRect.size];
+    
+	_panZoomLayer.anchorPoint = ccp(0.5f, 0.5f);
+	_panZoomLayer.position = ccp(0.5f * winSize.width, 0.5f * winSize.height);
+    
+    _panZoomLayer.panBoundsRect = CGRectMake(0, 0, winSize.width, winSize.height);
+    
+    _panZoomLayer.easeOutEffectIntensity = 10.0f;
+    
+	// position the label on the center of the bounds
+	CCNode *label = [_panZoomLayer getChildByTag: kLabelTag];
+	label.position =  ccp(boundingRect.size.width * 0.5f, boundingRect.size.height * 0.5f);
+}
+
+@end
+
+#pragma mark -
+#pragma mark RubberEaseOutTest 4
+
+@implementation CCLayerPanZoomRubberEaseOutTestLayer
+
+- (id) init
+{
+	if ((self = [super init])) 
+    {
+        _panZoomLayer = [[CCLayerPanZoom node] retain];
+        [self addChild: _panZoomLayer];
+		_panZoomLayer.delegate = self; 
+        
+        // background
+        CCSprite *background = [CCSprite spriteWithFile: @"background.png"];
+        background.anchorPoint = ccp(0,0);
+		background.scale = CC_CONTENT_SCALE_FACTOR() * 2; // pre-zoom background for better ease out effect
+        [_panZoomLayer addChild: background 
+                             z :0 
+                            tag: kBackgroundTag];
+		// create and initialize a Label
+		CCLabelTTF *label = [CCLabelTTF labelWithString: @"Try rubber effect combined with ease out effect by flicking finger near the edge." 
+                                               fontName: @"Marker Felt" 
+                                               fontSize: 24];
+		label.scale = 0.7f; //< to be visible on iPod Touch screen.
+		label.color = ccWHITE;
+		// add the label as a child to this Layer
+		[_panZoomLayer addChild: label 
+                              z: 1 
+                            tag: kLabelTag];
+        _panZoomLayer.mode = kCCLayerPanZoomModeSheet;
+        _panZoomLayer.minScale = 1.0f;
+        _panZoomLayer.rubberEffectRatio = 0.5f;
+		[self updateForScreenReshape];
+	}
+	
+	return self;
+	
+}
+
+- (NSString *) title
+{
+	return @"Test 4. Sheet (Rubber Effect ON, Ease Out Effect ON).";
+}
+
+- (void) updateForScreenReshape
+{
+	CGSize winSize = [[CCDirector sharedDirector] winSize];
+	CCNode *background = [_panZoomLayer getChildByTag: kBackgroundTag];
+	// our bounding rect
+	CGRect boundingRect = CGRectMake(0, 0, 0, 0);
+	boundingRect.size = [background boundingBox].size;
+	[_panZoomLayer setContentSize: boundingRect.size];
+    
+	_panZoomLayer.anchorPoint = ccp(0.5f, 0.5f);
+	_panZoomLayer.position = ccp(0.5f * winSize.width, 0.5f * winSize.height);
+    
+    _panZoomLayer.panBoundsRect = CGRectMake(0, 0, winSize.width, winSize.height);
+    
+    _panZoomLayer.easeOutEffectIntensity = 10.0f;
+    
+	// position the label on the center of the bounds
+	CCNode *label = [_panZoomLayer getChildByTag: kLabelTag];
+	label.position =  ccp(boundingRect.size.width * 0.5f, boundingRect.size.height * 0.5f);
 }
 
 @end
@@ -340,7 +478,7 @@ Class backTest()
         
         _selectedTestObject = testObject1;
         _selectedTestObject.color = ccRED;
-
+        
 		[self updateForScreenReshape];
 	}
 	
@@ -373,12 +511,12 @@ Class backTest()
 	CGRect boundingRect = CGRectMake(0, 0, 0, 0);
 	boundingRect.size = [background boundingBox].size;
 	[_panZoomLayer setContentSize: boundingRect.size];
-		
+    
 	_panZoomLayer.anchorPoint = ccp(0.5f, 0.5f);
 	_panZoomLayer.position = ccp(0.5f * winSize.width, 0.5f * winSize.height);
 	
     _panZoomLayer.panBoundsRect = CGRectMake(0, 0, winSize.width, winSize.height);
-
+    
 	// position the label on the center of the bounds
 	CCNode *label = [_panZoomLayer getChildByTag: kLabelTag];
 	label.position =  ccp(boundingRect.size.width * 0.5f, boundingRect.size.height * 0.5f);
@@ -453,7 +591,7 @@ Class backTest()
     
     [self selectTestObjectAtPoint: aPoint];
     
-     // Change anchorPoint & position of selectedTestObject to avoid jerky movement.
+    // Change anchorPoint & position of selectedTestObject to avoid jerky movement.
     if (_selectedTestObject)
     {
         CGFloat width = _selectedTestObject.contentSize.width;

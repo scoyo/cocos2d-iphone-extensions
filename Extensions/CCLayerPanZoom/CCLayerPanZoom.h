@@ -99,6 +99,10 @@ typedef enum
     CGFloat _rubberEffectRatio;
     BOOL _rubberEffectRecovering;
     BOOL _rubberEffectZooming;
+
+    ccTime _easeOutEffectRunningSpeed;
+    CGFloat _easeOutEffectIntensity;
+    BOOL _easeOutEffectRunning;
 }
 
 #pragma mark Zoom Options
@@ -176,5 +180,19 @@ typedef enum
  * Limitations: only sheet mode is supported.
  */
 @property (readwrite, assign) CGFloat rubberEffectRatio;
+
+#pragma mark Ease Out Effect Options
+
+/** Running speed factor for the ease out effect after releasing finger from touch. The actual value will depend on the distance to move.
+ * Default is 0.001f.
+ */
+@property (readwrite, assign) ccTime easeOutEffectRunningSpeed;
+
+/** Intensity of ease out effect (as known from Cocoa's UIScrollView) after releasing finger from screen after pan gesture.
+ * Default is 0.0f which means no effect at all (immediate stop).
+ * Good value to start with is 20.0f.
+ * Limitations: only sheet mode is supported.
+ */
+@property (readwrite, assign) CGFloat easeOutEffectIntensity;
 
 @end

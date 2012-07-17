@@ -30,6 +30,7 @@
 
 #import "CCLayerPanZoom.h"
 
+#define CCLAYERPANZOOM_ACTION_TAG 23446
 
 #ifdef DEBUG
 
@@ -103,7 +104,10 @@ typedef enum
 @interface CCLayerPanZoom ()
 
 @property (readwrite, retain) NSMutableArray *touches;
+// full distance finger moved on screen during a touch event
 @property (readwrite, assign) CGFloat touchDistance;
+// distance finger moved during the last update just before releasing the screen
+@property (readwrite, assign) CGPoint currentDistance;
 @property (readwrite, retain) CCScheduler *scheduler;
 // Return minimum possible scale for the layer considering panBoundsRect and enablePanBounds
 - (CGFloat) minPossibleScale;
@@ -113,6 +117,35 @@ typedef enum
 - (CGFloat) horSpeedWithPosition: (CGPoint) pos;
 // Return vertical speed in order with current position
 - (CGFloat) vertSpeedWithPosition: (CGPoint) pos;
+
+/**
+ * Returns distance between top edge of content and screen.
+ * Positive if image edge is visible on screen (black border), otherwise negative.
+ * Important value for down moved scroll gesture (-y translation).
+ */
+- (CGFloat) topEdgeOffset;
+
+/**
+ * Returns distance between left edge of content and screen.
+ * Positive if image edge is visible on screen (black border), otherwise negative.
+ * Important value for right moved scroll gesture (+x translation).
+ */
+- (CGFloat) leftEdgeOffset;
+
+/**
+ * Returns distance between bottom edge of content and screen.
+ * Positive if image edge is visible on screen (black border), otherwise negative.
+ * Important value for top moved scroll gesture (+y translation).
+ */
+- (CGFloat) bottomEdgeOffset;
+
+/**
+ * Returns distance between right edge of content and screen.
+ * Positive if image edge is visible on screen (black border), otherwise negative.
+ * Important value for left moved scroll gesture (-x translation).
+ */
+- (CGFloat) rightEdgeOffset;
+
 // Return distance to top edge of screen
 - (CGFloat) topEdgeDistance;
 // Return distance to left edge of screen
@@ -123,6 +156,8 @@ typedef enum
 - (CGFloat) rightEdgeDistance;
 // Recover position if it's need for emulate rubber edges
 - (void) recoverPositionAndScale;
+// Let content movement ease out after an scroll touch event
+- (void) runEaseOutEffect;
 
 @end
 
@@ -133,7 +168,9 @@ typedef enum
             delegate = _delegate, touches = _touches, touchDistance = _touchDistance, 
             minSpeed = _minSpeed, maxSpeed = _maxSpeed, topFrameMargin = _topFrameMargin, 
             bottomFrameMargin = _bottomFrameMargin, leftFrameMargin = _leftFrameMargin,
-            rightFrameMargin = _rightFrameMargin, scheduler = _scheduler, rubberEffectRecoveryTime = _rubberEffectRecoveryTime;
+            rightFrameMargin = _rightFrameMargin, scheduler = _scheduler, rubberEffectRecoveryTime = _rubberEffectRecoveryTime,
+            easeOutEffectRunningSpeed = _easeOutEffectRunningSpeed, easeOutEffectIntensity = _easeOutEffectIntensity,
+            currentDistance  = _currentDistance;
 
 @dynamic maxScale; 
 - (void) setMaxScale:(CGFloat)maxScale
@@ -211,6 +248,10 @@ typedef enum
         self.rubberEffectRecoveryTime = 0.2f;
         _rubberEffectRecovering = NO;
         _rubberEffectZooming = NO;
+
+        self.easeOutEffectRunningSpeed = 0.001f;
+        self.easeOutEffectIntensity = 0.0f;
+        _easeOutEffectRunning = NO;
 	}	
 	return self;
 }
@@ -220,6 +261,12 @@ typedef enum
 - (void) ccTouchesBegan: (NSSet *) touches 
 			  withEvent: (UIEvent *) event
 {	
+    // Stop rubber effect or ease out effect if running.
+    [self stopActionByTag:CCLAYERPANZOOM_ACTION_TAG];
+    _rubberEffectRecovering = NO;
+    _easeOutEffectRunning = NO;
+
+
 	for (UITouch *touch in [touches allObjects]) 
 	{
 		// Add new touche to the array with current touches
@@ -290,9 +337,11 @@ typedef enum
         }
         // Don't click with multitouch
 		self.touchDistance = INFINITY;
+        // Don't ease out with multitouch
+        self.currentDistance = CGPointZero;
 	}
 	else
-	{	        
+	{
         // Get the single touch and it's previous & current position.
         UITouch *touch = [self.touches objectAtIndex: 0];
         CGPoint curTouchPosition = [[CCDirector sharedDirector] convertToGL: [touch locationInView: [touch view]]];
@@ -309,6 +358,9 @@ typedef enum
         // Accumulate touch distance for all modes.
         self.touchDistance += ccpDistance(curTouchPosition, prevTouchPosition);
         
+        // Remember current distance for possible ease out effect.
+        self.currentDistance = ccpSub(curTouchPosition, prevTouchPosition);
+
         // Inform delegate about starting updating touch position, if click isn't possible.
         if (self.mode == kCCLayerPanZoomModeFrame)
         {
@@ -351,6 +403,11 @@ typedef enum
     if (![self.touches count] && !_rubberEffectRecovering)
     {
         [self recoverPositionAndScale];
+    }
+
+    if (![self.touches count] && self.easeOutEffectIntensity && !_easeOutEffectRunning)
+    {
+        [self runEaseOutEffect];
     }
 }
 
@@ -416,7 +473,7 @@ typedef enum
 #else
     CCScheduler *scheduler = [CCScheduler sharedScheduler];
 #endif               
-                
+
     [scheduler scheduleUpdateForTarget: self priority: 0 paused: NO];
 }
 
@@ -459,10 +516,11 @@ typedef enum
 #endif
     _mode = mode;
     
-    // Disable rubber effect in Frame mode.
+    // Disable rubber and ease out effects in Frame mode.
     if (_mode == kCCLayerPanZoomModeFrame)
     {        
         self.rubberEffectRatio = 0.0f;
+        self.easeOutEffectIntensity = 0.0f;
     }
 }
 
@@ -495,7 +553,7 @@ typedef enum
     {
         if (self.rubberEffectRatio && self.mode == kCCLayerPanZoomModeSheet)
         {
-            if (!_rubberEffectRecovering)
+            if (!_rubberEffectRecovering && !_easeOutEffectRunning)
             {
                 CGFloat topDistance = [self topEdgeDistance];
                 CGFloat bottomDistance = [self bottomEdgeDistance];
@@ -562,7 +620,7 @@ typedef enum
         CGFloat bottomEdgeDistance = [self bottomEdgeDistance];
         CGFloat scale = [self minPossibleScale];
         
-        if (!rightEdgeDistance && !leftEdgeDistance && !topEdgeDistance && !bottomEdgeDistance)
+        if ((!rightEdgeDistance && !leftEdgeDistance && !topEdgeDistance && !bottomEdgeDistance) || _easeOutEffectRunning)
         {
             return;
         }
@@ -640,7 +698,8 @@ typedef enum
                                                     position: newPosition];
             id scaleToPosition = [CCScaleTo actionWithDuration: self.rubberEffectRecoveryTime
                                                          scale: scale];
-            id sequence = [CCSpawn actions: scaleToPosition, moveToPosition, [CCCallFunc actionWithTarget: self selector: @selector(recoverEnded)], nil];
+            CCSpawn *sequence = [CCSpawn actions: scaleToPosition, moveToPosition, [CCCallFunc actionWithTarget: self selector: @selector(recoverEnded)], nil];
+            sequence.tag = CCLAYERPANZOOM_ACTION_TAG;
             [self runAction: sequence];
 
         }
@@ -650,7 +709,8 @@ typedef enum
             id moveToPosition = [CCMoveTo actionWithDuration: self.rubberEffectRecoveryTime
                                                     position: ccp(self.position.x + rightEdgeDistance - leftEdgeDistance, 
                                                                   self.position.y + topEdgeDistance - bottomEdgeDistance)];
-            id sequence = [CCSpawn actions: moveToPosition, [CCCallFunc actionWithTarget: self selector: @selector(recoverEnded)], nil];
+            CCSpawn *sequence = [CCSpawn actions: moveToPosition, [CCCallFunc actionWithTarget: self selector: @selector(recoverEnded)], nil];
+            sequence.tag = CCLAYERPANZOOM_ACTION_TAG;
             [self runAction: sequence];
             
         }
@@ -662,32 +722,139 @@ typedef enum
     _rubberEffectRecovering = NO;
 }
 
+#pragma mark Ease Out Effect related
+
+- (void) runEaseOutEffect
+{
+    // avoid ease out effect after minimal movement--doesn't look nice
+    const CGFloat MinimalMovementThreshold = 10.0f;
+
+    // No ease out effect if not configured, while rubber effect is running (any edge was visible on screen while releasing finger), or finger wasn't moved further than the given threshold.
+    if (!self.easeOutEffectIntensity || _rubberEffectRecovering || (abs(self.currentDistance.x) < MinimalMovementThreshold && abs(self.currentDistance.y) < MinimalMovementThreshold))
+    {
+        return;
+    }
+
+    _easeOutEffectRunning = YES;
+
+
+    // how far do we move the content
+    CGPoint normalizedVector = ccpMult(self.currentDistance, self.easeOutEffectIntensity / self.scale);
+    CCLOG(@"before correction: would move by (xy): %f %f", normalizedVector.x, normalizedVector.y);
+
+
+    // where will the screen be after ease out effect (before recovering through rubber effect)
+    CGFloat rightEdgeFinalPosition = [self rightEdgeOffset] - normalizedVector.x;
+    CGFloat leftEdgeFinalPosition = [self leftEdgeOffset] + normalizedVector.x;
+    CGFloat topEdgeFinalPosition = [self topEdgeOffset] - normalizedVector.y;
+    CGFloat bottomEdgeFinalPosition = [self bottomEdgeOffset] + normalizedVector.y;
+    CCLOG(@"edge offsets while releasing are (tlbr): %f %f %f %f", [self topEdgeOffset], [self rightEdgeOffset], [self bottomEdgeOffset], [self leftEdgeOffset]);
+    CCLOG(@"final position would be (tlbr): %f %f %f %f", topEdgeFinalPosition, rightEdgeFinalPosition, bottomEdgeFinalPosition, leftEdgeFinalPosition);
+
+
+    // do not ease out further than quarter the rubberEffectRatio (which is tested and looks good for a 0.5f ratio)
+    const CGFloat MaximalOverTheEdgeScrollingWidth = [UIScreen mainScreen].bounds.size.width * self.rubberEffectRatio / 4;
+    const CGFloat MaximalOverTheEdgeScrollingHeight = [UIScreen mainScreen].bounds.size.height * self.rubberEffectRatio / 4;
+    bool isEdgeVisible = NO;
+
+    if (rightEdgeFinalPosition > 0)
+    {
+        CGFloat correctTranslationBy = MAX(rightEdgeFinalPosition - MaximalOverTheEdgeScrollingWidth, 0);
+        normalizedVector.x += correctTranslationBy;
+        isEdgeVisible = YES;
+    }
+    else if (leftEdgeFinalPosition > 0)
+    {
+        CGFloat correctTranslationBy = MAX(leftEdgeFinalPosition - MaximalOverTheEdgeScrollingWidth, 0);
+        normalizedVector.x -= correctTranslationBy;
+        isEdgeVisible = YES;
+    }
+    if (topEdgeFinalPosition > 0)
+    {
+        CGFloat correctTranslationBy = MAX(topEdgeFinalPosition - MaximalOverTheEdgeScrollingHeight, 0);
+        normalizedVector.y += correctTranslationBy;
+        isEdgeVisible = YES;
+    }
+    else if (bottomEdgeFinalPosition > 0)
+    {
+        CGFloat correctTranslationBy = MAX(bottomEdgeFinalPosition - MaximalOverTheEdgeScrollingHeight, 0);
+        normalizedVector.y -= correctTranslationBy;
+        isEdgeVisible = YES;
+    }
+    CCLOG(@"after correction: will move by (xy): %f %f", normalizedVector.x, normalizedVector.y);
+
+
+    // calculate normalized distance to determine effect duration to get a natural speed feeling of effect
+    CGFloat normalizedDistance = sqrt (normalizedVector.x * normalizedVector.x + normalizedVector.y * normalizedVector.y);
+    ccTime effectDuration = self.easeOutEffectRunningSpeed * normalizedDistance;
+
+
+    // create action sequence that will run actual effect
+    id moveBy = [CCMoveBy actionWithDuration: effectDuration position: normalizedVector];
+    id ease = [CCEaseExponentialOut actionWithAction: moveBy];
+    CCSequence *sequence = [CCSequence actions: ease, [CCCallFunc actionWithTarget: self selector: @selector(easeOutEffectEnded)], nil];
+    sequence.tag = CCLAYERPANZOOM_ACTION_TAG;
+    [self runAction: sequence];
+
+    // reset distance to prepare next execution
+    self.currentDistance = CGPointZero;
+}
+
+/**
+ * Called when ease out action sequence finished.
+ */
+- (void) easeOutEffectEnded
+{
+    _easeOutEffectRunning = NO;
+    [self recoverPositionAndScale];
+}
+
 #pragma mark Helpers
+
+- (CGFloat) topEdgeOffset
+{
+    CGRect boundBox = [self boundingBox];
+    return round(self.panBoundsRect.size.height + self.panBoundsRect.origin.y - self.position.y -
+                 boundBox.size.height * (1 - self.anchorPoint.y));
+}
+
+- (CGFloat) leftEdgeOffset
+{
+    CGRect boundBox = [self boundingBox];
+    return round(self.position.x - boundBox.size.width * self.anchorPoint.x - self.panBoundsRect.origin.x);
+}    
+
+- (CGFloat) bottomEdgeOffset
+{
+    CGRect boundBox = [self boundingBox];
+    return round(self.position.y - boundBox.size.height * self.anchorPoint.y - self.panBoundsRect.origin.y);
+}
+
+- (CGFloat) rightEdgeOffset
+{
+    CGRect boundBox = [self boundingBox];
+    return round(self.panBoundsRect.size.width + self.panBoundsRect.origin.x - self.position.x -
+                 boundBox.size.width * (1 - self.anchorPoint.x));
+}
 
 - (CGFloat) topEdgeDistance
 {
-    CGRect boundBox = [self boundingBox];
-    return round(MAX(self.panBoundsRect.size.height + self.panBoundsRect.origin.y - self.position.y - 
-                     boundBox.size.height * (1 - self.anchorPoint.y), 0));
+    return MAX([self topEdgeOffset], 0);
 }
 
 - (CGFloat) leftEdgeDistance
 {
-    CGRect boundBox = [self boundingBox];
-    return round(MAX(self.position.x - boundBox.size.width * self.anchorPoint.x - self.panBoundsRect.origin.x, 0));
-}    
+    return MAX([self leftEdgeOffset], 0);
+}
 
 - (CGFloat) bottomEdgeDistance
 {
-    CGRect boundBox = [self boundingBox];
-    return round(MAX(self.position.y - boundBox.size.height * self.anchorPoint.y - self.panBoundsRect.origin.y, 0));
+    return MAX([self bottomEdgeOffset], 0);
 }
 
 - (CGFloat) rightEdgeDistance
 {
-    CGRect boundBox = [self boundingBox];
-    return round(MAX(self.panBoundsRect.size.width + self.panBoundsRect.origin.x - self.position.x - 
-               boundBox.size.width * (1 - self.anchorPoint.x), 0));
+    return MAX([self rightEdgeOffset], 0);
 }
 
 - (CGFloat) minPossibleScale

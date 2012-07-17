@@ -11,6 +11,7 @@ Sheet Mode
 
 In this mode you can scroll layer with swipes and zoom it with pinch in/out gestures, like in Google Maps app (see "Simple sheet test").  
 Also, in sheet mode it's possible to have "ruber edges" like in many iOS apps for sliding parts of the intraface (see "Advanced sheet test").  
+Another feature in sheet mode is a "ease out" effect as known from iOS apps with UIScrollView like Mobile Safari. When flicking the finger after panning, the scrren continues scrolling with ease out animation. (See "EaseOutTest" and "RubberEaseOutTest".)
 
 
 Frame Mode
@@ -33,6 +34,7 @@ Usage
 7. If you want to use kCCLayerPanZoomModeSheet:
    * Set ruberEffectRatio if you want to use "ruber effect" (scrolling/zooming outside of panBoundsRect).
    * Also you can change rubberEffectRecoveryTime - in that time layer will recover to normal zoom/position.
+   * If you want the "ease out effect", set the easeOutEffectIntensity. You can also adjust the easeOutEffectRunningSpeed to tweak the behavior.
 8. If you want to use kCCLayerPanZoomModeFrame:
    * Set topFrameMargin, leftFrameMargin, bottomFrameMargin and rightFrameMargin to define distances from edges of panBoundingRect.
    * Set maxSpeed and minSpeed for autoscrolling when touch is in zone near edge of panBoundingRect.

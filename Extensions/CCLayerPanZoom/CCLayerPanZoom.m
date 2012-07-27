@@ -581,15 +581,30 @@ currentDistance  = _currentDistance;
                 CGFloat rightDistance = [self rightEdgeDistance];
                 CGFloat dx = self.position.x - prevPosition.x;
                 CGFloat dy = self.position.y - prevPosition.y;
+                
                 if (bottomDistance || topDistance)
                 {
-                    [super setPosition: ccp(self.position.x,
-                                            prevPosition.y + dy * self.rubberEffectRatio)];
+                    if ([self layerToWinSizeRatioHeight] > 1.0f) // only allow effect if layer height doesn't fit into screen height by 100%
+                    {
+                        [super setPosition: ccp(self.position.x,
+                                                prevPosition.y + dy * self.rubberEffectRatio)];
+                    }
+                    else
+                    {
+                        [super setPosition: ccp(self.position.x, prevPosition.y)];
+                    }
                 }
                 if (leftDistance || rightDistance)
                 {
-                    [super setPosition: ccp(prevPosition.x + dx * self.rubberEffectRatio,
-                                            self.position.y)];
+                    if ([self layerToWinSizeRatioWidth] > 1.0f) // only allow effect if layer height doesn't fit into screen width by 100%
+                    {
+                        [super setPosition: ccp(prevPosition.x + dx * self.rubberEffectRatio,
+                                                self.position.y)];
+                    }
+                    else
+                    {
+                        [super setPosition: ccp(prevPosition.x, self.position.y)];
+                    }
                 }
             }
         }
@@ -764,6 +779,17 @@ currentDistance  = _currentDistance;
     
     // how far do we move the content
     CGPoint normalizedVector = ccpMult(self.currentDistance, self.easeOutEffectIntensity / self.scale);
+    if ([self layerToWinSizeRatioWidth] == 1.0f)
+    {
+        // do not run effect if image width fits into screen by 100%
+        normalizedVector.x = 0.0f;
+    }
+    if ([self layerToWinSizeRatioHeight] == 1.0f)
+    {
+        // do not run effect if image height fits into screen by 100%
+        normalizedVector.y = 0.0f;
+    }
+    
     CCLOG(@"before correction: would move by (xy): %f %f", normalizedVector.x, normalizedVector.y);
     
     
@@ -989,6 +1015,16 @@ currentDistance  = _currentDistance;
                     self.topFrameMargin) / (self.topFrameMargin * sqrt(2.0f)));
     }
     return speed;
+}
+
+- (CGFloat) layerToWinSizeRatioHeight
+{
+    return self.boundingBox.size.height / [CCDirector sharedDirector].winSize.height;
+}
+
+- (CGFloat) layerToWinSizeRatioWidth
+{
+    return self.boundingBox.size.width / [CCDirector sharedDirector].winSize.width;
 }
 
 #pragma mark Dealloc

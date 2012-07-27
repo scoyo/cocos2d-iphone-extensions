@@ -165,12 +165,12 @@ typedef enum
 @implementation CCLayerPanZoom
 
 @synthesize maxTouchDistanceToClick = _maxTouchDistanceToClick,
-            delegate = _delegate, touches = _touches, touchDistance = _touchDistance,
-            minSpeed = _minSpeed, maxSpeed = _maxSpeed, topFrameMargin = _topFrameMargin,
-            bottomFrameMargin = _bottomFrameMargin, leftFrameMargin = _leftFrameMargin,
-            rightFrameMargin = _rightFrameMargin, scheduler = _scheduler, rubberEffectRecoveryTime = _rubberEffectRecoveryTime,
-            easeOutEffectRunningSpeed = _easeOutEffectRunningSpeed, easeOutEffectIntensity = _easeOutEffectIntensity,
-            currentDistance  = _currentDistance;
+delegate = _delegate, touches = _touches, touchDistance = _touchDistance,
+minSpeed = _minSpeed, maxSpeed = _maxSpeed, topFrameMargin = _topFrameMargin,
+bottomFrameMargin = _bottomFrameMargin, leftFrameMargin = _leftFrameMargin,
+rightFrameMargin = _rightFrameMargin, scheduler = _scheduler, rubberEffectRecoveryTime = _rubberEffectRecoveryTime,
+easeOutEffectRunningSpeed = _easeOutEffectRunningSpeed, easeOutEffectIntensity = _easeOutEffectIntensity,
+currentDistance  = _currentDistance;
 
 @dynamic maxScale;
 - (void) setMaxScale:(CGFloat)maxScale
@@ -200,14 +200,14 @@ typedef enum
 - (void) setRubberEffectRatio:(CGFloat)rubberEffectRatio
 {
     _rubberEffectRatio = rubberEffectRatio;
-
+    
     // Avoid turning rubber effect On in frame mode.
     if (self.mode == kCCLayerPanZoomModeFrame)
     {
         CCLOGERROR(@"CCLayerPanZoom#setRubberEffectRatio: rubber effect is not supported in frame mode.");
         _rubberEffectRatio = 0.0f;
     }
-
+    
 }
 
 - (CGFloat) rubberEffectRatio
@@ -228,14 +228,14 @@ typedef enum
 		self.isRelativeAnchorPoint = YES;
 #endif
 		self.isTouchEnabled = YES;
-
+        
 		self.maxScale = 3.0f;
 		self.minScale = 0.5f;
 		self.touches = [NSMutableArray arrayWithCapacity: 10];
 		self.panBoundsRect = CGRectNull;
 		self.touchDistance = 0.0F;
 		self.maxTouchDistanceToClick = 15.0f;
-
+        
         self.mode = kCCLayerPanZoomModeSheet;
         self.minSpeed = 100.0f;
         self.maxSpeed = 1000.0f;
@@ -243,12 +243,12 @@ typedef enum
         self.bottomFrameMargin = 100.0f;
         self.leftFrameMargin = 100.0f;
         self.rightFrameMargin = 100.0f;
-
+        
         self.rubberEffectRatio = 0.5f;
         self.rubberEffectRecoveryTime = 0.2f;
         _rubberEffectRecovering = NO;
         _rubberEffectZooming = NO;
-
+        
         self.easeOutEffectRunningSpeed = 0.001f;
         self.easeOutEffectIntensity = 0.0f;
         _easeOutEffectRunning = NO;
@@ -265,16 +265,23 @@ typedef enum
     [self stopActionByTag:CCLAYERPANZOOM_ACTION_TAG];
     _rubberEffectRecovering = NO;
     _easeOutEffectRunning = NO;
-
-
+    
+    
 	for (UITouch *touch in [touches allObjects])
 	{
 		// Add new touch to the array with current touches
 		[self.touches addObject: touch];
 	}
-
+    
     if ([self.touches count] == 1)
     {
+        // sent touch info to delegate (if configured)
+        if ([self.delegate respondsToSelector:@selector(layerPanZoom:touchBeganAtPoint:)])
+        {
+            CGPoint curTouchPosition = [[CCDirector sharedDirector] convertToGL: [[self.touches lastObject] locationInView: [[self.touches lastObject] view]]];
+            [self.delegate layerPanZoom: self touchBeganAtPoint:[self convertToNodeSpace: curTouchPosition]];
+        }
+        
         _touchMoveBegan = NO;
         _singleTouchTimestamp = [NSDate timeIntervalSinceReferenceDate];
     }
@@ -285,14 +292,14 @@ typedef enum
 - (void) ccTouchesMoved: (NSSet *) touches
 			  withEvent: (UIEvent *) event
 {
-
+    
     // Fixes issue #108:
     // ccTouchesMoved should never be called if ccTouchesBegan is not called first.
     // However, when the scene is transitioning in, ccTouchesBegan is not called,
     // causing self.touches to be empty, thus crashing the app due to an attempt
     // to access an empty array.
     if ([self.touches count] == 0) return;
-
+    
 	BOOL multitouch = [self.touches count] > 1;
 	if (multitouch)
 	{
@@ -307,7 +314,7 @@ typedef enum
 		// Calculate current and previous positions of the layer relative the anchor point
 		CGPoint curPosLayer = ccpMidpoint(curPosTouch1, curPosTouch2);
 		CGPoint prevPosLayer = ccpMidpoint(prevPosTouch1, prevPosTouch2);
-
+        
 		// Calculate new scale
         CGFloat prevScale = self.scale;
         self.scale = self.scale * ccpDistance(curPosTouch1, curPosTouch2) / ccpDistance(prevPosTouch1, prevPosTouch2);
@@ -346,7 +353,7 @@ typedef enum
         UITouch *touch = [self.touches objectAtIndex: 0];
         CGPoint curTouchPosition = [[CCDirector sharedDirector] convertToGL: [touch locationInView: [touch view]]];
         CGPoint prevTouchPosition = [[CCDirector sharedDirector] convertToGL: [touch previousLocationInView: [touch view]]];
-
+        
         // Always scroll in sheet mode.
         if (self.mode == kCCLayerPanZoomModeSheet)
         {
@@ -354,13 +361,13 @@ typedef enum
             self.position = ccp(self.position.x + curTouchPosition.x - prevTouchPosition.x,
                                 self.position.y + curTouchPosition.y - prevTouchPosition.y);
         }
-
+        
         // Accumulate touch distance for all modes.
         self.touchDistance += ccpDistance(curTouchPosition, prevTouchPosition);
-
+        
         // Remember current distance for possible ease out effect.
         self.currentDistance = ccpSub(curTouchPosition, prevTouchPosition);
-
+        
         // Inform delegate about starting updating touch position, if click isn't possible.
         if (self.mode == kCCLayerPanZoomModeFrame)
         {
@@ -381,7 +388,7 @@ typedef enum
 			  withEvent: (UIEvent *) event
 {
     _singleTouchTimestamp = INFINITY;
-
+    
     // Process click event in single touch.
     if ( (self.delegate) && ([self.touches count] == 1) )
     {
@@ -399,7 +406,7 @@ typedef enum
                         releasedAtPoint: [self convertToNodeSpace: curPos]];
         }
     }
-
+    
 	for (UITouch *touch in [touches allObjects])
 	{
 		// Remove touche from the array with current touches
@@ -409,12 +416,12 @@ typedef enum
 	{
 		self.touchDistance = 0.0f;
 	}
-
+    
     if (![self.touches count] && self.easeOutEffectIntensity && !_easeOutEffectRunning)
     {
         [self runEaseOutEffect];
     }
-
+    
     if (![self.touches count] && !_rubberEffectRecovering)
     {
         [self recoverPositionAndScale];
@@ -446,22 +453,22 @@ typedef enum
         // Do not update position if click is still possible.
         if (self.touchDistance <= self.maxTouchDistanceToClick)
             return;
-
+        
         // Do not update position if pinch is still possible.
         if ([NSDate timeIntervalSinceReferenceDate] - _singleTouchTimestamp < kCCLayerPanZoomMultitouchGesturesDetectionDelay)
             return;
-
+        
         // Otherwise - update touch position. Get current position of touch.
         UITouch *touch = [self.touches objectAtIndex: 0];
         CGPoint curPos = [[CCDirector sharedDirector] convertToGL: [touch locationInView: [touch view]]];
-
+        
         // Scroll if finger in the scroll area near edge.
         if ([self frameEdgeWithPoint: curPos] != kCCLayerPanZoomFrameEdgeNone)
         {
             self.position = ccp(self.position.x + dt * [self horSpeedWithPosition: curPos],
                                 self.position.y + dt * [self vertSpeedWithPosition: curPos]);
         }
-
+        
         // Inform delegate if touch position in layer was changed due to finger or layer movement.
         CGPoint touchPositionInLayer = [self convertToNodeSpace: curPos];
         if (!CGPointEqualToPoint(_prevSingleTouchPositionInLayer, touchPositionInLayer))
@@ -473,20 +480,20 @@ typedef enum
                        touchPositionUpdated: touchPositionInLayer];
             }
         }
-
+        
     }
 }
 
 - (void) onEnter
 {
     [super onEnter];
-
+    
 #if COCOS2D_VERSION >= 0x00020000
     CCScheduler *scheduler = [[CCDirector sharedDirector] scheduler];
 #else
     CCScheduler *scheduler = [CCScheduler sharedScheduler];
 #endif
-
+    
     [scheduler scheduleUpdateForTarget: self priority: 0 paused: NO];
 }
 
@@ -497,7 +504,7 @@ typedef enum
 #else
     CCScheduler *scheduler = [CCScheduler sharedScheduler];
 #endif
-
+    
     [scheduler unscheduleAllSelectorsForTarget: self];
     [super onExit];
 }
@@ -509,7 +516,7 @@ typedef enum
 - (void) setMode: (CCLayerPanZoomMode) mode
 {
 #ifdef DEBUG
-    if (mode == kCCLayerPanZoomModeFrame)
+    if (_mode != kCCLayerPanZoomModeFrame && mode == kCCLayerPanZoomModeFrame)
     {
         CCLayerPanZoomDebugLines *lines = [CCLayerPanZoomDebugLines node];
         [lines setContentSize: [CCDirector sharedDirector].winSize];
@@ -528,7 +535,7 @@ typedef enum
     }
 #endif
     _mode = mode;
-
+    
     // Disable rubber and ease out effects in Frame mode.
     if (_mode == kCCLayerPanZoomModeFrame)
     {
@@ -632,10 +639,10 @@ typedef enum
         CGFloat topEdgeDistance = [self topEdgeDistance];
         CGFloat bottomEdgeDistance = [self bottomEdgeDistance];
         CGFloat scale = [self minPossibleScale];
-
+        
         if ((rightEdgeDistance || leftEdgeDistance || topEdgeDistance || bottomEdgeDistance) && !_easeOutEffectRunning)
         {
-
+            
             if (self.scale < scale)
             {
                 _rubberEffectRecovering = YES;
@@ -704,7 +711,7 @@ typedef enum
                     CGFloat dx = scale * self.contentSize.width * (self.anchorPoint.x - 0.5f);
                     newPosition = ccp(winSize.width * 0.5f + dx, self.position.y);
                 }
-
+                
                 id moveToPosition = [CCMoveTo actionWithDuration: self.rubberEffectRecoveryTime
                                                         position: newPosition];
                 id scaleToPosition = [CCScaleTo actionWithDuration: self.rubberEffectRecoveryTime
@@ -712,7 +719,7 @@ typedef enum
                 CCSpawn *sequence = [CCSpawn actions: scaleToPosition, moveToPosition, [CCCallFunc actionWithTarget: self selector: @selector(recoverEnded)], nil];
                 sequence.tag = CCLAYERPANZOOM_ACTION_TAG;
                 [self runAction: sequence];
-
+                
             }
             else
             {
@@ -723,7 +730,7 @@ typedef enum
                 CCSpawn *sequence = [CCSpawn actions: moveToPosition, [CCCallFunc actionWithTarget: self selector: @selector(recoverEnded)], nil];
                 sequence.tag = CCLAYERPANZOOM_ACTION_TAG;
                 [self runAction: sequence];
-
+                
             }
         }
 	}
@@ -751,15 +758,15 @@ typedef enum
     {
         return;
     }
-
+    
     _easeOutEffectRunning = YES;
-
-
+    
+    
     // how far do we move the content
     CGPoint normalizedVector = ccpMult(self.currentDistance, self.easeOutEffectIntensity / self.scale);
     CCLOG(@"before correction: would move by (xy): %f %f", normalizedVector.x, normalizedVector.y);
-
-
+    
+    
     // where will the screen be after ease out effect (before recovering through rubber effect)
     CGFloat rightEdgeFinalPosition = [self rightEdgeOffset] - normalizedVector.x;
     CGFloat leftEdgeFinalPosition = [self leftEdgeOffset] + normalizedVector.x;
@@ -767,12 +774,12 @@ typedef enum
     CGFloat bottomEdgeFinalPosition = [self bottomEdgeOffset] + normalizedVector.y;
     CCLOG(@"edge offsets while releasing are (tlbr): %f %f %f %f", [self topEdgeOffset], [self rightEdgeOffset], [self bottomEdgeOffset], [self leftEdgeOffset]);
     CCLOG(@"final position would be (tlbr): %f %f %f %f", topEdgeFinalPosition, rightEdgeFinalPosition, bottomEdgeFinalPosition, leftEdgeFinalPosition);
-
-
+    
+    
     // do not ease out further than quarter the rubberEffectRatio (which is tested and looks good for a 0.5f ratio)
     const CGFloat MaximalOverTheEdgeScrollingWidth = [UIScreen mainScreen].bounds.size.width * self.rubberEffectRatio / 4;
     const CGFloat MaximalOverTheEdgeScrollingHeight = [UIScreen mainScreen].bounds.size.height * self.rubberEffectRatio / 4;
-
+    
     if (rightEdgeFinalPosition > 0)
     {
         CGFloat correctTranslationBy = MAX(rightEdgeFinalPosition - MaximalOverTheEdgeScrollingWidth, 0);
@@ -794,20 +801,20 @@ typedef enum
         normalizedVector.y -= correctTranslationBy;
     }
     CCLOG(@"after correction: will move by (xy): %f %f", normalizedVector.x, normalizedVector.y);
-
-
+    
+    
     // calculate normalized distance to determine effect duration to get a natural speed feeling of effect
     CGFloat normalizedDistance = sqrt (normalizedVector.x * normalizedVector.x + normalizedVector.y * normalizedVector.y);
     ccTime effectDuration = self.easeOutEffectRunningSpeed * normalizedDistance;
-
-
+    
+    
     // create action sequence that will run actual effect
     id moveBy = [CCMoveBy actionWithDuration: effectDuration position: normalizedVector];
     id ease = [CCEaseExponentialOut actionWithAction: moveBy];
     CCSequence *sequence = [CCSequence actions: ease, [CCCallFunc actionWithTarget: self selector: @selector(easeOutEffectEnded)], nil];
     sequence.tag = CCLAYERPANZOOM_ACTION_TAG;
     [self runAction: sequence];
-
+    
     // reset distance to prepare next execution
     self.currentDistance = CGPointZero;
 }
@@ -888,7 +895,7 @@ typedef enum
     BOOL isRight = point.x >= self.panBoundsRect.origin.x + self.panBoundsRect.size.width - self.rightFrameMargin;
     BOOL isBottom = point.y <= self.panBoundsRect.origin.y + self.bottomFrameMargin;
     BOOL isTop = point.y >= self.panBoundsRect.origin.y + self.panBoundsRect.size.height - self.topFrameMargin;
-
+    
     if (isLeft && isBottom)
     {
         return kCCLayerPanZoomFrameEdgeBottomLeft;
@@ -905,7 +912,7 @@ typedef enum
     {
         return kCCLayerPanZoomFrameEdgeTopRight;
     }
-
+    
     if (isLeft)
     {
         return kCCLayerPanZoomFrameEdgeLeft;
@@ -922,7 +929,7 @@ typedef enum
     {
         return kCCLayerPanZoomFrameEdgeBottom;
     }
-
+    
     return kCCLayerPanZoomFrameEdgeNone;
 }
 
@@ -933,12 +940,12 @@ typedef enum
     if (edge == kCCLayerPanZoomFrameEdgeLeft)
     {
         speed = self.minSpeed + (self.maxSpeed - self.minSpeed) *
-            (self.panBoundsRect.origin.x + self.leftFrameMargin - pos.x) / self.leftFrameMargin;
+        (self.panBoundsRect.origin.x + self.leftFrameMargin - pos.x) / self.leftFrameMargin;
     }
     if (edge == kCCLayerPanZoomFrameEdgeBottomLeft || edge == kCCLayerPanZoomFrameEdgeTopLeft)
     {
         speed = self.minSpeed + (self.maxSpeed - self.minSpeed) *
-            (self.panBoundsRect.origin.x + self.leftFrameMargin - pos.x) / (self.leftFrameMargin * sqrt(2.0f));
+        (self.panBoundsRect.origin.x + self.leftFrameMargin - pos.x) / (self.leftFrameMargin * sqrt(2.0f));
     }
     if (edge == kCCLayerPanZoomFrameEdgeRight)
     {

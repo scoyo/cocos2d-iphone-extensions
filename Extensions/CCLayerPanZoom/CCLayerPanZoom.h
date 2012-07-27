@@ -47,8 +47,12 @@ typedef enum
 
 @optional
 
+/** Sent to delegate each time, a touch event started on screen.
+ * Only sent for single touch and immediately when finger touches the screen. */
+- (void) layerPanZoom: (CCLayerPanZoom *) sender
+    touchBeganAtPoint: (CGPoint) aPoint;
+
 /** Sent to delegate each time, when click event was obtained.
- * Only for mode = kCCLayerPanZoomModeSheet.
  * Only sent for single touch and if finger was not dragged on the screen before. */
 - (void) layerPanZoom: (CCLayerPanZoom *) sender
        clickedAtPoint: (CGPoint) aPoint
@@ -87,7 +91,7 @@ typedef enum
 	CGFloat _touchDistance;
 	CGFloat _maxTouchDistanceToClick;
 	id<CCLayerPanZoomClickDelegate> _delegate;
-
+    
     CCLayerPanZoomMode _mode;
     CGFloat _minSpeed;
     CGFloat _maxSpeed;
@@ -95,22 +99,22 @@ typedef enum
     CGFloat _bottomFrameMargin;
     CGFloat _leftFrameMargin;
     CGFloat _rightFrameMargin;
-
+    
     CGPoint _prevSingleTouchPositionInLayer;
     //< previous position in layer if single touch was moved.
-
+    
     // Time when single touch has began, used to wait for possible multitouch
     // gestures before reacting to single touch.
     NSTimeInterval _singleTouchTimestamp;
-
+    
     // Flag used to call touchMoveBeganAtPosition: only once for each single touch event.
     BOOL _touchMoveBegan;
-
+    
     ccTime _rubberEffectRecoveryTime;
     CGFloat _rubberEffectRatio;
     BOOL _rubberEffectRecovering;
     BOOL _rubberEffectZooming;
-
+    
     ccTime _easeOutEffectRunningSpeed;
     CGFloat _easeOutEffectIntensity;
     BOOL _easeOutEffectRunning;
